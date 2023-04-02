@@ -32,6 +32,7 @@ private[uring] final class Uring[F[_]](ring: UringExecutorScheduler)(implicit F:
 
   private[this] val noopRelease: Int => F[Unit] = _ => F.unit
 
+  // MEMO: io_uring_prep_xxx 系の関数を呼ぶときに使われている
   def call(prep: Ptr[io_uring_sqe] => Unit): F[Int] =
     exec(prep)(noopRelease)
 
@@ -47,6 +48,7 @@ private[uring] final class Uring[F[_]](ring: UringExecutorScheduler)(implicit F:
           G.uncancelable { poll =>
             val submit = F.delay {
               val sqe = ring.getSqe(resume)
+              // MEMO: ここでprep関数を呼ぶ操作に対応
               prep(sqe)
               sqe.user_data
             }

@@ -31,6 +31,7 @@ object UringRuntime {
     IORuntime(ecScheduler, ecScheduler, ecScheduler, shutdown, config)
   }
 
+  // MEMO: ExecutionContextScheduler ってなんだっけ？
   def defaultExecutionContextScheduler(): (ExecutionContext with Scheduler, () => Unit) =
     UringExecutorScheduler(64, 64)
 

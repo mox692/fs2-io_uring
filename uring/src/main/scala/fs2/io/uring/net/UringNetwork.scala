@@ -25,6 +25,7 @@ import fs2.io.net.Network
 import fs2.io.net.SocketOption
 import fs2.io.net.tls.TLSContext
 
+// MEMO: fs2本家の NetworkCompanionPlatform に似てる？
 private[net] final class UringNetwork[F[_]](
     sg: UringSocketGroup[F],
     val tlsContext: TLSContext.Builder[F]

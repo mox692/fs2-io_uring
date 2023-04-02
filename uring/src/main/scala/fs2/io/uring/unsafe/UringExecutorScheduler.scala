@@ -29,6 +29,9 @@ import scala.scalanative.unsigned._
 import uring._
 import uringOps._
 
+// MEMO: 基本、PollingExecutorScheduler という認識で良さそう (まずは nativeにおいて PollingExecutorScheduler がどのように使われているのかを見る)
+//       特に io_uring に対応した poll と言う関数を提供している
+//       cats-effect側にある、QueueExecutorScheduler と対応しそう(pollを提供している, PollingExecutorScheduler を継承したobject)
 private[uring] final class UringExecutorScheduler(
     ring: Ptr[io_uring],
     pollEvery: Int,
@@ -123,6 +126,7 @@ private[uring] final class UringExecutorScheduler(
 
 private[uring] object UringExecutorScheduler {
 
+  // MEMO: UringExecutorScheduler を返す
   def apply(pollEvery: Int, maxEvents: Int): (UringExecutorScheduler, () => Unit) = {
     implicit val zone = Zone.open()
     val ring = alloc[io_uring]()
