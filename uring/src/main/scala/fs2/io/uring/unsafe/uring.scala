@@ -34,6 +34,7 @@ private[uring] object uring {
   type __kernel_time64_t = CLongLong
   type __kernel_timespec = CStruct2[__kernel_time64_t, CLongLong]
 
+  // https://github.com/axboe/liburing/blob/9134244a4e16e68cb514ea5192fcd7e9beca96f5/src/include/liburing.h#L128
   type io_uring = CStruct9[
     io_uring_sq,
     io_uring_cq,
