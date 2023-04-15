@@ -32,12 +32,16 @@ import uringOps._
 private[uring] final class UringExecutorScheduler(
     ring: Ptr[io_uring],
     pollEvery: Int,
-    maxEvents: Int
+    maxEvents: Int,
+    fixexBufferStack: ArrayStack[(Ptr[Byte], Int)]
 ) extends PollingExecutorScheduler(pollEvery) {
 
   private[this] var pendingSubmissions: Boolean = false
   private[this] val callbacks: Set[Either[Throwable, Int] => Unit] =
     Collections.newSetFromMap(new IdentityHashMap)
+
+  // そのbufエントリのptrと、index(prep_fixedで使うやつ)を保持するstack
+  def getFixedBufferStack: ArrayStack[(Ptr[Byte], Int)] = fixexBufferStack
 
   def getSqe(cb: Either[Throwable, Int] => Unit): Ptr[io_uring_sqe] = {
     pendingSubmissions = true
@@ -132,12 +136,19 @@ private[uring] object UringExecutorScheduler {
     // and at most pollEvery suspensions can happen per iteration
     io_uring_queue_init(pollEvery.toUInt, ring, 0.toUInt)
 
+    // for fixed buffer
+    val ptr = alloc[iovec]()
+
+    io_uring_register_buffers(ring, ptr, 64.toUInt)
+
+    val arrayStack = ArrayStack.apply[(Ptr[Byte], Int)](ptr, 64)
+
     val cleanup = () => {
       io_uring_queue_exit(ring)
       zone.close()
     }
 
-    (new UringExecutorScheduler(ring, pollEvery, maxEvents), cleanup)
+    (new UringExecutorScheduler(ring, pollEvery, maxEvents, arrayStack), cleanup)
   }
 
 }

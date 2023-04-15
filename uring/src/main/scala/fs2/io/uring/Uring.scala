@@ -32,6 +32,8 @@ private[uring] final class Uring[F[_]](ring: UringExecutorScheduler)(implicit F:
 
   private[this] val noopRelease: Int => F[Unit] = _ => F.unit
 
+  def popFixedBuffer: F[(Ptr[Byte], Int)] = F.delay(ring.getFixedBufferStack.pop())
+
   def call(prep: Ptr[io_uring_sqe] => Unit): F[Int] =
     exec(prep)(noopRelease)
 

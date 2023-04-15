@@ -28,6 +28,12 @@ import cats.effect.kernel.{Async, Resource, Sync}
 import fs2.Chunk
 import fs2.io.file.Flags
 import fs2.io.file.Path
+import cats.syntax.all._
+import fs2.io.uring._
+import fs2.io.uring.unsafe.uring._
+import fs2.io.uring.unsafe.util._
+import scala.scalanative.unsigned._
+import scala.scalanative.unsafe._
 
 private[file] trait UringFileHandlePlatform[F[_]] {
   // some apis those are specific to io_uring.
@@ -41,7 +47,9 @@ private[file] trait UringFileHandleCompanionPlatform {
 
   /** Creates a `UringFileHandle[F]` from a `java.nio.channels.FileChannel`. */
   private[file] def make[F[_]](
-      chan: FileChannel
+      chan: FileChannel,
+      ring: Uring[F],
+      fd: Int
   )(implicit F: Sync[F]): UringFileHandle[F] =
     new UringFileHandle[F] {
       type Lock = FileLock
@@ -49,14 +57,24 @@ private[file] trait UringFileHandleCompanionPlatform {
       override def force(metaData: Boolean): F[Unit] =
         F.blocking(chan.force(metaData))
 
-      override def read(numBytes: Int, offset: Long): F[Option[Chunk[Byte]]] =
-        F.blocking {
-          val buf = ByteBuffer.allocate(numBytes)
-          val len = chan.read(buf, offset)
-          if (len < 0) None
-          else if (len == 0) Some(Chunk.empty)
-          else Some(Chunk.array(buf.array, 0, len))
-        }
+      private def readFixed(
+          bytes: Ptr[Byte],
+          maxBytes: Int,
+          offset: Int,
+          fixedBufferIndex: Int
+      ): F[Int] =
+        ring.call(
+          io_uring_prep_read_fixed(_, fd, bytes, maxBytes.toULong, offset.toULong, fixedBufferIndex)
+        )
+
+      override def read(numBytes: Int, offset: Long): F[Option[Chunk[Byte]]] = {
+        for {
+          buf <- ring.popFixedBuffer
+          _ <- readFixed(buf._1, numBytes, offset.toInt, buf._2)
+        } yield Sync[F].delay(None)
+
+        ???
+      }
 
       override def size: F[Long] =
         F.blocking(chan.size)

@@ -20,6 +20,7 @@ import scala.scalanative.libc.stddef._
 import scala.scalanative.posix.signal.sigset_t
 import scala.scalanative.posix.sys.socket._
 import scala.scalanative.unsafe._
+import scala.scalanative.unsafe.Nat._
 import scala.scalanative.unsigned._
 import scala.scalanative.runtime.Intrinsics._
 
@@ -94,6 +95,10 @@ private[uring] object uring {
 
   type io_uring_sqe =
     CStruct10[__u8, __u8, __u16, __s32, __u64, __u64, __u32, __u32, __u64, CArray[__u64, Nat._3]]
+
+  type _64 = Digit2[_6, _4]
+
+  type iovec = CArray[CStruct2[Ptr[CUnsignedInt], size_t], _64]
 
   def io_uring_queue_init(entries: CUnsignedInt, ring: Ptr[io_uring], flags: CUnsignedInt): CInt =
     extern
@@ -182,6 +187,23 @@ private[uring] object uring {
       `type`: CInt,
       protocol: CInt,
       flags: CUnsignedInt
+  ): Unit = extern
+
+  @name("fs2_io_uring_register_buffers")
+  def io_uring_register_buffers(
+      ring: Ptr[io_uring],
+      iovec: iovec,
+      nr_iovecs: CUnsignedInt
+  ): Unit = extern
+
+  @name("fs2_io_uring_prep_read_fixed")
+  def io_uring_prep_read_fixed(
+      sqe: Ptr[io_uring_sqe],
+      filefd: CInt,
+      buf: Ptr[Byte],
+      len: size_t,
+      offset: __u64,
+      index: CInt
   ): Unit = extern
 
 }
